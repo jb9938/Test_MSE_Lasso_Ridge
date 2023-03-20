@@ -5,4 +5,5 @@ This repository demonstrates the difference bewteen test MSE and training MSE. I
 
 
 # File
-
+test and training MSE.Rmd: Demonstrates & Compares the difference bewteen train and test MSE using 3 different subset selection method (Best, forward stepwise, backward stepwise)
+Lasso & Ridge Comparison.Rmd: Demonstrates cases where lasso outperforms ridge and vice versa. 
