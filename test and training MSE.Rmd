@@ -1,0 +1,113 @@
+---
+title: "Test & Training MSE"
+author: "Joon Bum Yang"
+date: '2023-03-20'
+output: pdf_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(leaps)
+library(tidyverse)
+library(ISLR)
+library(boot)
+```
+
+
+# Set up data set with p = 20 n = 1000 and quantative response vector of b_1 = b_2 = 2 and b_3 = b_4 = b_5 = 0.5
+```{r}
+p = 20
+n = 1000
+beta = c(c(2,2,2,0.5,0.5), rep(0,15))
+set.seed(0)
+X = matrix(rnorm(n*p),nrow = n,ncol = p)
+xi = rnorm(n)
+y = X %*% beta + xi
+
+# Randomly split to 100 train and 900 test
+indx = sample(1:n,100)
+y.train = y[indx]
+x.train = X[indx,]
+y.test = y[-indx]
+x.test = X[-indx,]
+```
+
+# Plotting Training MSE of each number of varaibles using best sub-set selection 
+```{r}
+reg.fit = regsubsets(x = x.train,y = y.train,nvmax = 20)
+reg.summary = summary(reg.fit)
+plot(reg.summary$rss/length(y.train),xlab="Number of Variables",ylab="MSE",type="l")
+
+```
+# Plotting Test set MSE of each number of varaibles using best sub-set selection  
+```{r}
+x.test = cbind(rep(1,900),x.test)
+colnames(x.test) = names(coef(reg.fit,id=20))
+test.mse <- rep(NA,20)
+for(i in 1:20){
+coefi <- coef(reg.fit,id=i)
+pred <- x.test[,names(coefi)]%*%coefi
+test.mse[i] <- mean((y.test-pred)^2)
+}
+plot(test.mse,xlab="Number of Variables",ylab="MSE",type="l")
+```
+
+# Compare the number of varaibles that produces mimimum testMSE
+```{r}
+opt.train = which.min(reg.summary$rss)
+opt.test = which.min(test.mse)
+```
+The training MSE has the minimal value when the model size is 20, while the test MSE has the minimal
+value when the model size is 5. The training error always decreases as the number of predictors increases.
+Choosing the model based on the training MSE leads to overfitting. The selected model based on the test
+MSE corresponds to the true model.
+
+# Apply the same method with L2 Norm
+```{r}
+vals = rep(NA,20)
+for(i in 1:20){
+coefi <- coef(reg.fit,id=i)
+betai = rep(0,21)
+names(betai) = colnames(x.test)
+betai[names(coefi)] = coefi
+vals[i] = sqrt(sum((beta - betai[-1])^2))
+}
+plot(vals,xlab="Number of Variables",ylab="l2 norm",type="l")
+
+```
+
+As the number of variables increases, the ℓ2 norm of the estimation error first decreases, achieves its minimum
+when the model size is 5, and then increases. It has the same trend as the test MSE plot
+
+# Compare the result for forward Stepwise and backward stepwise selection
+```{r}
+
+#Forward Stepwise
+reg.fit.forward = regsubsets(x = x.train,y = y.train,nvmax = 20,method="forward")
+reg.summary.forward = summary(reg.fit.forward)
+
+test.mse <- rep(NA,20)
+for(i in 1:20){
+coefi <- coef(reg.fit.forward,id=i)
+pred <- x.test[,names(coefi)]%*%coefi
+test.mse[i] <- mean((y.test-pred)^2)
+}
+which.min(reg.summary.forward$rss)
+which.min(test.mse)
+
+#Backward Stepwise selection
+reg.fit.backward = regsubsets(x = x.train,y = y.train,nvmax = 20,method="backward")
+reg.summary.backward = summary(reg.fit.backward)
+test.mse <- rep(NA,20)
+for(i in 1:20){
+coefi <- coef(reg.fit.backward,id=i)
+pred <- x.test[,names(coefi)]%*%coefi
+test.mse[i] <- mean((y.test-pred)^2)
+}
+which.min(reg.summary.backward$rss)
+which.min(test.mse)
+
+```
+
+
+
